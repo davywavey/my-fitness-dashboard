@@ -12,13 +12,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# 在侧边栏配置API密钥 - 安全提示：正式部署时应使用环境变量
 with st.sidebar:
     st.title("🔑 API配置")
     st.markdown("**首次使用请配置：**")
-    api_key = st.text_input("请输入您的智谱AI API密钥", type="password")
-    if api_key:
+    
+    # 输入框
+    api_key_input = st.text_input("请输入您的智谱AI API密钥", type="password")
+    
+    # 保存到 session_state
+    if api_key_input:
+        st.session_state.api_key = api_key_input
         st.success("✅ API密钥已设置")
+    else:
+        st.session_state.api_key = None  # 清空密钥
+    
     st.markdown("---")
     st.info("""
     **新功能：AI健康周报**
@@ -26,7 +33,6 @@ with st.sidebar:
     - 提供个性化健康建议
     - 识别潜在健康风险
     """)
-
 # 加载数据
 @st.cache_data
 def load_data():
@@ -93,6 +99,9 @@ def main():
     if data is None:
         return
     
+    # 获取 API 密钥（从 session_state）
+    api_key = st.session_state.get('api_key', None)
+    
     # 第一行：核心指标
     st.subheader("📊 健康指标总览")
     col1, col2, col3, col4 = st.columns(4)
@@ -118,7 +127,7 @@ def main():
     # 第二行：AI健康周报
     st.subheader("🤖 AI健康周报")
     
-    if not api_key:
+       if not api_key:
         st.warning("⚠️ 请在侧边栏输入API密钥以启用AI分析功能")
     else:
         ai_col1, ai_col2 = st.columns([3, 1])
@@ -127,6 +136,12 @@ def main():
                 with st.spinner("AI正在分析您的健康数据..."):
                     ai_advice = get_ai_health_insight(data, api_key)
                     st.session_state.ai_advice = ai_advice
+        
+        with ai_col1:
+            if 'ai_advice' in st.session_state:
+                st.success(st.session_state.ai_advice)
+            else:
+                st.info("点击按钮生成您的个性化AI健康分析报告")
         
         with ai_col1:
             if 'ai_advice' in st.session_state:
@@ -161,3 +176,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
