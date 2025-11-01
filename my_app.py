@@ -29,6 +29,7 @@ def get_local_health_analysis(data):
     avg_sleep = recent_data['睡眠时长(小时)'].mean()
     avg_quality = recent_data['睡眠质量'].mean()
     active_days = len(recent_data[recent_data['运动时长(分钟)'] > 0])
+    unique_sports = len(recent_data['运动项目'].unique())
     
     # 运动分析
     if avg_duration > 45:
@@ -46,7 +47,18 @@ def get_local_health_analysis(data):
     else:
         sleep_analysis = "睡眠质量可以进一步优化，保持规律的作息时间会很有帮助。"
     
-    # 综合建议
+    # 生成个性化建议
+    suggestions = []
+    if unique_sports < 3:
+        suggestions.append("💡 建议尝试不同运动项目，让锻炼更有趣")
+    if avg_quality < 4:
+        suggestions.append("🌙 睡前1小时避免使用电子设备，提升睡眠质量")
+    if active_days < 4:
+        suggestions.append("🚶 即使不进行正式运动，也可以多散步活动")
+    
+    suggestions_text = "\n".join(suggestions) if suggestions else "🎉 继续保持当前的健康生活习惯！"
+    
+    # 综合评估
     if active_days >= 5 and avg_quality >= 4:
         status = "🏆 优秀！你的运动睡眠平衡做得很好"
     elif active_days >= 3:
@@ -55,8 +67,7 @@ def get_local_health_analysis(data):
         status = "💪 加油！从小改变开始，建立健康习惯"
     
     # 生成个性化分析报告
-    analysis = f"""
-{status}
+    analysis = f"""{status}
 
 **运动分析：**
 最近{len(recent_data)}天中，你有{active_days}天进行了运动，平均每天{avg_duration:.1f}分钟。{sport_analysis}
@@ -65,10 +76,7 @@ def get_local_health_analysis(data):
 平均每晚睡眠{avg_sleep:.1f}小时，质量评分{avg_quality:.1f}/5分。{sleep_analysis}
 
 **个性化建议：**
-{'
-💡 建议尝试不同运动项目，让锻炼更有趣' if len(recent_data['运动项目'].unique()) < 3 else ''}
-{'🌙 睡前1小时避免使用电子设备，提升睡眠质量' if avg_quality < 4 else ''}
-{'🚶 即使不进行正式运动，也可以多散步活动' if active_days < 4 else ''}
+{suggestions_text}
 
 继续记录，观察自己的进步轨迹！
 """
@@ -232,4 +240,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
