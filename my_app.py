@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import os
 from datetime import datetime
+import io
 
 # 页面设置
 st.set_page_config(
@@ -83,9 +84,86 @@ def get_local_health_analysis(data):
     
     return analysis
 
+# 修复数据加载函数
+def load_data():
+    """修复数据加载，处理各种格式问题"""
+    try:
+        if os.path.exists(DATA_FILE):
+            # 首先尝试正常读取
+            try:
+                data = pd.read_csv(DATA_FILE)
+                # 尝试转换日期格式
+                data['日期'] = pd.to_datetime(data['日期'], errors='coerce')
+                # 删除无法解析日期的行
+                data = data.dropna(subset=['日期'])
+                return data
+            except:
+                # 如果正常读取失败，尝试手动解析
+                st.warning("检测到数据格式问题，尝试修复...")
+                with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # 如果是单行格式，转换为标准CSV
+                if ',' in content and '\n' not in content:
+                    lines = [content]
+                else:
+                    lines = content.split('\n')
+                
+                # 重建标准CSV数据
+                standard_data = []
+                for line in lines:
+                    if line.strip():
+                        parts = line.split(',')
+                        if len(parts) >= 6:
+                            # 修复日期格式：2025.11.1 -> 2025-11-01
+                            date_str = parts[0].strip().replace('.', '-')
+                            # 确保日期格式正确
+                            if len(date_str.split('-')[2]) == 1:
+                                date_parts = date_str.split('-')
+                                date_str = f"{date_parts[0]}-{date_parts[1]}-0{date_parts[2]}"
+                            
+                            standard_data.append({
+                                '日期': date_str,
+                                '运动项目': parts[1].strip(),
+                                '运动时长(分钟)': int(parts[2].strip()),
+                                '运动感受': int(parts[3].strip()) if parts[3].strip() else 3,
+                                '睡眠时长(小时)': float(parts[4].strip()),
+                                '睡眠质量': int(parts[5].strip())
+                            })
+                
+                if standard_data:
+                    data = pd.DataFrame(standard_data)
+                    data['日期'] = pd.to_datetime(data['日期'])
+                    # 保存修复后的数据
+                    data.to_csv(DATA_FILE, index=False)
+                    st.success("✅ 数据格式修复成功！")
+                    return data
+                else:
+                    return pd.DataFrame()
+                    
+        else:
+            return pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"数据加载失败: {e}")
+        return pd.DataFrame()
+
 # 在侧边栏配置
 with st.sidebar:
     st.title("🔧 操作中心")
+    
+    # 数据管理选项
+    st.markdown("### 数据管理")
+    if st.button("🔄 重新加载数据"):
+        st.cache_data.clear()
+        st.rerun()
+    
+    if st.button("🗑️ 清除所有数据"):
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+            st.cache_data.clear()
+            st.success("数据已清除")
+            st.rerun()
     
     st.markdown("---")
     st.markdown("### 添加新记录")
@@ -117,9 +195,9 @@ with st.sidebar:
             
             try:
                 # 读取现有数据
-                if os.path.exists(DATA_FILE):
-                    existing_df = pd.read_csv(DATA_FILE)
-                    updated_df = pd.concat([existing_df, new_df], ignore_index=True)
+                existing_data = load_data()
+                if not existing_data.empty:
+                    updated_df = pd.concat([existing_data, new_df], ignore_index=True)
                 else:
                     updated_df = new_df
                 
@@ -129,23 +207,10 @@ with st.sidebar:
                 
                 # 清除缓存，强制重新加载数据
                 st.cache_data.clear()
+                st.rerun()
                 
             except Exception as e:
                 st.error(f"保存失败: {e}")
-
-# 加载数据
-@st.cache_data
-def load_data():
-    try:
-        if os.path.exists(DATA_FILE):
-            data = pd.read_csv(DATA_FILE)
-            data['日期'] = pd.to_datetime(data['日期'])
-            return data
-        else:
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"数据加载失败: {e}")
-        return pd.DataFrame()
 
 # 主应用界面
 def main():
@@ -156,7 +221,14 @@ def main():
     
     if data.empty:
         st.info("📝 暂无数据，请在侧边栏添加你的第一条健康记录！")
+        
+        # 显示数据文件状态
+        if os.path.exists(DATA_FILE):
+            st.warning("检测到数据文件但无法解析，请在侧边栏点击'重新加载数据'尝试修复")
         return
+    
+    # 显示数据概览
+    st.success(f"✅ 已加载 {len(data)} 条记录，时间范围: {data['日期'].min().strftime('%Y-%m-%d')} 到 {data['日期'].max().strftime('%Y-%m-%d')}")
     
     # 第一行：核心指标
     st.subheader("📊 健康指标总览")
@@ -219,24 +291,7 @@ def main():
     # 第四行：数据表格
     st.markdown("---")
     st.subheader("📋 历史数据记录")
-    
-    # 添加数据筛选功能
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_sport = st.selectbox("筛选运动项目", ["全部"] + list(data['运动项目'].unique()))
-    with col2:
-        date_range = st.selectbox("时间范围", ["全部", "最近7天", "最近30天"])
-    
-    # 应用筛选
-    filtered_data = data.copy()
-    if selected_sport != "全部":
-        filtered_data = filtered_data[filtered_data['运动项目'] == selected_sport]
-    if date_range == "最近7天":
-        filtered_data = filtered_data[filtered_data['日期'] >= (datetime.now() - pd.Timedelta(days=7))]
-    elif date_range == "最近30天":
-        filtered_data = filtered_data[filtered_data['日期'] >= (datetime.now() - pd.Timedelta(days=30))]
-    
-    st.dataframe(filtered_data, use_container_width=True, hide_index=True)
+    st.dataframe(data, use_container_width=True, hide_index=True)
 
 if __name__ == "__main__":
     main()
