@@ -39,9 +39,14 @@ def save_data(data):
         return False
 
 # ============= AI 分析函数 =============
+from openai import OpenAI
+
+# 初始化 OpenAI 客户端
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 def analyze_health_data(new_record, all_data):
     """
-    调用 OpenAI 模型，对用户健康数据进行全面分析。
+    调用 OpenAI 模型，对用户健康数据进行全面分析（新版接口）
     """
     try:
         prompt = f"""
@@ -60,11 +65,12 @@ def analyze_health_data(new_record, all_data):
 
 请使用简洁自然的中文表达。
 """
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
+
     except Exception as e:
         return f"⚠️ AI 分析出错：{e}"
 
@@ -156,6 +162,7 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
 
