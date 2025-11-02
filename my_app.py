@@ -124,8 +124,7 @@ with st.form("input_form"):
                     st.write(ai_result)
 
                     st.info("✅ 如需更新页面，请点击下方“🔄 手动刷新页面”。")
-                else:
-                    st.error("保存失败，请重试。")
+               
 
                 else:
                     st.error("保存失败，请重试。")
@@ -157,6 +156,7 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
 
