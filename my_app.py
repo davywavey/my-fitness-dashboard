@@ -120,7 +120,7 @@ with st.form("input_form"):
                     st.write(ai_result)
 
                     # 刷新页面
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("保存失败，请重试。")
 
@@ -143,12 +143,12 @@ col1, col2 = st.columns(2)
 
 with col1:
     if st.button("🔄 手动刷新页面"):
-        st.experimental_rerun()
+        st.rerun()
 
 with col2:
     if st.button("🗑️ 清空所有数据"):
         if os.path.exists(DATA_FILE):
             os.remove(DATA_FILE)
             st.success("数据已清空")
-            st.experimental_rerun()
+            st.rerun()
 
