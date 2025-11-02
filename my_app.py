@@ -13,6 +13,8 @@ st.set_page_config(
 
 # 从环境变量读取 OpenAI Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
+st.sidebar.write("🔑 OpenAI Key 已检测到" if openai.api_key else "❌ 未检测到 OpenAI Key")
+
 
 # 数据文件路径
 DATA_FILE = "my_data.csv"
@@ -110,17 +112,18 @@ with st.form("input_form"):
                 updated_data = pd.concat([current_data, new_record], ignore_index=True)
 
                 # 保存数据
-                if save_data(updated_data):
-                    st.success("✅ 记录保存成功！")
+               if save_data(updated_data):
+    st.success("✅ 记录保存成功！")
 
-                    # 调用 AI 分析
-                    with st.spinner("🤖 AI 正在分析中，请稍候..."):
-                        ai_result = analyze_health_data(new_record, updated_data)
-                    st.markdown("### 🤖 AI 分析结果")
-                    st.write(ai_result)
+    # 调用 AI 分析
+    with st.spinner("🤖 AI 正在分析中，请稍候..."):
+        ai_result = analyze_health_data(new_record, updated_data)
 
-                    # 刷新页面
-                    st.rerun()
+    st.markdown("### 🤖 AI 分析结果")
+    st.write(ai_result)
+
+    st.info("✅ 如需更新页面，请点击下方“🔄 手动刷新页面”。")
+
                 else:
                     st.error("保存失败，请重试。")
 
@@ -151,4 +154,5 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
