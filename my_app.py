@@ -112,14 +112,20 @@ with st.form("input_form"):
                 updated_data = pd.concat([current_data, new_record], ignore_index=True)
 
                 # 保存数据
-               if save_data(updated_data)
-            st.success("✅ 记录保存成功！")
-            # 调用 AI 分析
-            with st.spinner("🤖 AI 正在分析中，请稍候..."):
-                ai_result = analyze_health_data(new_record, updated_data)
-                st.markdown("### 🤖 AI 分析结果")
-                st.write(ai_result)
-                st.info("✅ 如需更新页面，请点击下方“🔄 手动刷新页面”。")
+                               # 保存数据
+                if save_data(updated_data):
+                    st.success("✅ 记录保存成功！")
+
+                    # 调用 AI 分析
+                    with st.spinner("🤖 AI 正在分析中，请稍候..."):
+                        ai_result = analyze_health_data(new_record, updated_data)
+
+                    st.markdown("### 🤖 AI 分析结果")
+                    st.write(ai_result)
+
+                    st.info("✅ 如需更新页面，请点击下方“🔄 手动刷新页面”。")
+                else:
+                    st.error("保存失败，请重试。")
 
                 else:
                     st.error("保存失败，请重试。")
@@ -151,6 +157,7 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
 
