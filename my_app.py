@@ -14,42 +14,29 @@ import json
 import requests
 OPENROUTER_API_KEY = "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"
 
+headers = {
+    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+    "Content-Type": "application/json; charset=utf-8",
+    "HTTP-Referer": "https://yourapp.example",  # 可随意填，但必须有
+    "X-Title": "My Fitness Dashboard"           # 可自定义标题
+}
 
+# 👇 关键行：确保 JSON 中文正常编码
+data_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
-def analyze_health_data(new_record, all_data, model_name):
-    try:
-        payload = {
-            "model": model_name,
-            "messages": [
-                {"role": "system", "content": "你是一名专业健康分析师，请用清晰自然的中文输出。"},
-                {"role": "user", "content": f"以下是今天的健康数据：{new_record.to_dict(orient='records')}；"
-                                           f"历史记录：{all_data.tail(5).to_dict(orient='records')}。"}
-            ]
-        }
+res = requests.post(
+    "https://openrouter.ai/api/v1/chat/completions",
+    headers=headers,
+    data=data_bytes,
+    timeout=60
+)
 
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json; charset=utf-8"
-        }
+res.encoding = "utf-8"
 
-        # 👇 关键行：用 ensure_ascii=False，强制保留中文，并手动编码成 UTF-8
-        data_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-
-        res = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            data=data_bytes,     # 👈 注意这里是 bytes
-            timeout=60
-        )
-        res.encoding = "utf-8"
-
-        if res.status_code == 200:
-            return res.json()["choices"][0]["message"]["content"].strip()
-        else:
-            return f"⚠️ AI 分析出错：{res.status_code}\n{res.text}"
-
-    except Exception as e:
-        return f"⚠️ 网络或接口错误：{str(e)}"
+if res.status_code == 200:
+    return res.json()["choices"][0]["message"]["content"].strip()
+else:
+    return f"⚠️ AI 分析出错: {res.status_code}\n{res.text}"
 
 
 
@@ -141,6 +128,7 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
 
