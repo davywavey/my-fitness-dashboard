@@ -2,6 +2,12 @@ import streamlit as st
 import requests
 import json
 from datetime import date
+import streamlit as st
+import os
+
+# ✅ 关键修正：优先从 Streamlit secrets 获取密钥
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", st.secrets.get("OPENROUTER_API_KEY"))
+
 
 # -------------------------------
 # ✅ 1️⃣ 你的 OpenRouter API key（从 https://openrouter.ai/keys 获取）
@@ -85,5 +91,6 @@ if submitted:
     analysis = analyze_with_openrouter(payload)
     st.markdown("### 😄 AI 分析结果")
     st.write(analysis)
+
 
 
