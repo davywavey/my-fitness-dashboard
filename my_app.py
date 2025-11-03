@@ -8,7 +8,8 @@ from datetime import datetime
 st.set_page_config(page_title="健康数据记录系统", page_icon="🏃", layout="wide")
 
 # ============= OpenRouter 设置 =============
-OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", None)
+import json
+import requests
 
 def analyze_health_data(new_record, all_data, model_name):
     """
@@ -48,19 +49,22 @@ def analyze_health_data(new_record, all_data, model_name):
     }
 
     try:
+        # ✅ 用 json.dumps 强制 UTF-8 编码
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            json=data.encode("utf-8") if isinstance(data, str) else data,
+            data=json.dumps(data, ensure_ascii=False).encode("utf-8"),
             timeout=60
         )
         res.encoding = "utf-8"
+
         if res.status_code == 200:
             return res.json()["choices"][0]["message"]["content"].strip()
         else:
             return f"⚠️ AI 分析出错：{res.status_code}\n{res.text}"
     except Exception as e:
         return f"⚠️ 网络或接口错误：{e}"
+
 
 
 # ============= 数据文件配置 =============
@@ -151,5 +155,6 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
