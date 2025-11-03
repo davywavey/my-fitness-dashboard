@@ -39,54 +39,54 @@ def save_data(data):
         return False
 
 # ============= AI 分析函数 =============
-import requests
+import openai
+import os
 
-def analyze_health_data(new_record, all_data):
+# 用环境变量读取 key（在 Streamlit secrets 或系统环境变量中配置）
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def analyze_health_data(today_data, history_data):
     """
-    使用 OpenRouter 免费模型（Llama3）分析健康数据
+    用 AI 分析用户的运动与睡眠情况，并生成中文总结。
+    today_data: dict - 当天的输入（例如 {"date": "2025-11-03", "运动": "跑步", "时长": "40", ...}）
+    history_data: list - 过去几天的记录，用于比较趋势
     """
+
+    # 拼接提示内容
+    user_prompt = f"""
+    以下是用户今天的健康记录：
+    {today_data}
+
+    以下是过去五天的健康记录：
+    {history_data}
+
+    请用中文总结用户今天的运动与睡眠情况，指出趋势（例如是否变好），并给出简短的建议和一句鼓励语。
+    要求：
+    1. 内容清晰有条理，用编号分段。
+    2. 不要输出英文或其他语言。
+    3. 语气积极、自然。
+    """
+
     try:
-        prompt = f"""
-你是一名专业健康顾问。
-以下是用户当天的健康记录：
-{new_record.to_dict(orient='records')}
+        from openai import OpenAI
+        client = OpenAI(api_key=openai.api_key)
 
-历史数据如下（最近5天）：
-{all_data.tail(5).to_dict(orient='records')}
-
-请你综合分析并回答：
-1️⃣ 对当天的运动与睡眠进行简要评价；
-2️⃣ 如果和过去几天有变化，说明趋势；
-3️⃣ 给出改善建议；
-4️⃣ 最后一句写一句鼓励性的话。
-
-请使用简洁自然的中文表达。
-"""
-
-        headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-            "Content-Type": "application/json",
-        }
-
-        data = {
-            "model": "meta-llama/llama-3-8b-instruct",  # 免费模型
-            "messages": [{"role": "user", "content": prompt}],
-        }
-
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # 免费或低价模型
+            messages=[
+                {"role": "system", "content": "你是一位健康与生活方式分析师，请用简洁自然的中文回答。"},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=600
         )
 
-        result = response.json()
-        if "choices" in result:
-            return result["choices"][0]["message"]["content"].strip()
-        else:
-            return f"⚠️ AI 分析出错：{result}"
+        result = response.choices[0].message.content.strip()
+        return result
+
     except Exception as e:
-        return f"⚠️ 网络或API错误：{e}"
+        return f"⚠️ AI 分析出错： {str(e)}"
+
 
 
 # ============= 页面主逻辑 =============
@@ -177,6 +177,7 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
 
