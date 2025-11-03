@@ -10,12 +10,10 @@ st.set_page_config(page_title="健康数据记录系统", page_icon="🏃", layo
 # ============= OpenRouter 设置 =============
 import json
 import requests
-OPENROUTER_API_KEY = "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"
-
 
 def analyze_health_data(new_record, all_data, model_name):
     """
-    使用 OpenRouter 模型对健康数据进行中文分析（UTF-8 安全版）
+    使用 OpenRouter 模型对健康数据进行中文分析（最终版）
     """
     if not OPENROUTER_API_KEY:
         return "⚠️ 未检测到 OpenRouter API Key，请在 Streamlit Secrets 中设置。"
@@ -51,16 +49,13 @@ def analyze_health_data(new_record, all_data, model_name):
     }
 
     try:
-        # ✅ 确保以 UTF-8 编码为 bytes
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-
+        # ✅ 关键区别：我们让 requests 直接处理 json，而不是手动 encode
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            data=body,
+            json=payload,  # 👈 让 requests 自动编码为 UTF-8 JSON
             timeout=60
         )
-
         res.encoding = "utf-8"
 
         if res.status_code == 200:
@@ -69,8 +64,6 @@ def analyze_health_data(new_record, all_data, model_name):
         else:
             return f"⚠️ AI 分析出错：{res.status_code}\n{res.text}"
 
-    except UnicodeEncodeError as ue:
-        return f"⚠️ 编码错误：{ue}. 请检查输入中是否含有特殊字符。"
     except Exception as e:
         return f"⚠️ 网络或接口错误：{e}"
 
@@ -164,6 +157,7 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
 
