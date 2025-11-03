@@ -13,61 +13,41 @@ import requests
 OPENROUTER_API_KEY = "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"
 
 
+
 def analyze_health_data(new_record, all_data, model_name):
-    """
-    使用 OpenRouter 模型对健康数据进行中文分析（最终版）
-    """
-    if not OPENROUTER_API_KEY:
-        return "⚠️ 未检测到 OpenRouter API Key，请在 Streamlit Secrets 中设置。"
-
-    prompt = f"""
-你是一位专业健康顾问。
-以下是用户今天的健康记录：
-{new_record.to_dict(orient='records')}
-
-历史数据如下（最近5天）：
-{all_data.tail(5).to_dict(orient='records')}
-
-请用简洁自然的中文分析并输出以下内容：
-1️⃣ 对当天运动和睡眠的评价；
-2️⃣ 是否出现变化或趋势；
-3️⃣ 改进建议；
-4️⃣ 最后一行写一句鼓励语。
-"""
-
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://my-fitness-dashboard.streamlit.app/",
-        "X-Title": "健康数据分析AI",
-        "Content-Type": "application/json; charset=utf-8"
-    }
-
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": "你是一名专业健康分析师，请用清晰的中文输出。"},
-            {"role": "user", "content": prompt}
-        ]
-    }
-
     try:
-        # ✅ 关键区别：我们让 requests 直接处理 json，而不是手动 encode
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": "你是一名专业健康分析师，请用清晰自然的中文输出。"},
+                {"role": "user", "content": f"以下是今天的健康数据：{new_record.to_dict(orient='records')}；"
+                                           f"历史记录：{all_data.tail(5).to_dict(orient='records')}。"}
+            ]
+        }
+
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+
+        # 👇 关键行：用 ensure_ascii=False，强制保留中文，并手动编码成 UTF-8
+        data_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
         res = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers=headers,
-            json=payload,  # 👈 让 requests 自动编码为 UTF-8 JSON
+            data=data_bytes,     # 👈 注意这里是 bytes
             timeout=60
         )
         res.encoding = "utf-8"
 
         if res.status_code == 200:
-            result = res.json()
-            return result["choices"][0]["message"]["content"].strip()
+            return res.json()["choices"][0]["message"]["content"].strip()
         else:
             return f"⚠️ AI 分析出错：{res.status_code}\n{res.text}"
 
     except Exception as e:
-        return f"⚠️ 网络或接口错误：{e}"
+        return f"⚠️ 网络或接口错误：{str(e)}"
 
 
 
@@ -159,6 +139,7 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
 
