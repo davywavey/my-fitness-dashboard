@@ -14,13 +14,40 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", st.secrets.get("OPENROUTER_
 OPENROUTER_API_KEY = "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"
 # -------------------------------
 # ✅ 2️⃣ 调用 OpenRouter 的安全函数
+import requests
+import json
+
 def analyze_with_openrouter(payload):
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json; charset=utf-8",
-        "HTTP-Referer": "https://localhost",
-        "X-Title": "My Fitness Dashboard"
-    }
+    try:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json; charset=utf-8",
+            "HTTP-Referer": "https://localhost",
+            "X-Title": "My Fitness Dashboard"
+        }
+
+        # 🔧 关键：防止中文乱码
+        data_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+        # 🚀 发送请求
+        res = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            data=data_bytes,
+            timeout=60
+        )
+
+        res.encoding = "utf-8"
+
+        # ✅ 返回正确响应
+        if res.status_code == 200:
+            return res.json()["choices"][0]["message"]["content"].strip()
+        else:
+            return f"❌ 授权错误：{res.status_code} - {res.text}"
+
+    except Exception as e:
+        return f"⚠️ 网络或接口错误：{e}"
+
 
     # ✅ 防止中文乱码错误
     data_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -91,6 +118,7 @@ if submitted:
     analysis = analyze_with_openrouter(payload)
     st.markdown("### 😄 AI 分析结果")
     st.write(analysis)
+
 
 
 
