@@ -7,14 +7,10 @@ from datetime import datetime
 
 # 页面设置
 st.set_page_config(
-    page_title="AI健康分析平台",
+    page_title="健康数据分析平台",
     page_icon="🏃",
     layout="wide"
 )
-
-# API配置
-OPENROUTER_API_KEY = "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"
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 DATA_FILE = 'my_data.csv'
 
@@ -24,7 +20,6 @@ def load_data():
     if os.path.exists(DATA_FILE):
         try:
             data = pd.read_csv(DATA_FILE)
-            # 确保日期列存在
             if '日期' not in data.columns:
                 data['日期'] = datetime.now().strftime('%Y-%m-%d')
             return data
@@ -41,105 +36,112 @@ def save_data(data):
         st.error(f"保存失败: {e}")
         return False
 
-# OpenRouter AI分析函数
-def get_ai_health_analysis(data):
-    """使用OpenRouter进行健康分析"""
+# 本地智能分析函数（无需API）
+def get_local_health_analysis(data):
+    """基于规则的智能健康分析"""
     if len(data) < 3:
         return "需要至少3天的数据才能生成有意义的分析报告"
     
-    # 准备数据摘要
     recent_data = data.tail(7)
     
-    summary = f"""
-用户健康数据摘要（最近{len(recent_data)}天）：
+    # 计算关键指标
+    avg_duration = recent_data['运动时长(分钟)'].mean()
+    avg_sleep = recent_data['睡眠时长(小时)'].mean()
+    avg_quality = recent_data['睡眠质量'].mean()
+    active_days = len(recent_data[recent_data['运动时长(分钟)'] > 0])
+    sport_variety = len(recent_data[recent_data['运动项目'] != '']['运动项目'].unique())
+    
+    # 运动分析
+    if avg_duration > 45:
+        sport_analysis = "你的运动量相当充足！保持这个节奏对身体很有益。"
+        sport_emoji = "🏆"
+    elif avg_duration > 25:
+        sport_analysis = "运动习惯很好，继续保持！"
+        sport_emoji = "👍"
+    else:
+        sport_analysis = "运动量还有提升空间，建议逐步增加运动频率。"
+        sport_emoji = "💪"
+    
+    # 睡眠分析
+    if avg_sleep >= 7.5 and avg_quality >= 4:
+        sleep_analysis = "睡眠质量非常理想，这对运动恢复很重要。"
+        sleep_emoji = "😴"
+    elif avg_sleep >= 7:
+        sleep_analysis = "睡眠状况良好，可以继续保持。"
+        sleep_emoji = "😊"
+    else:
+        sleep_analysis = "睡眠时间稍显不足，建议保证7小时以上睡眠。"
+        sleep_emoji = "🌙"
+    
+    # 运动多样性分析
+    if sport_variety >= 3:
+        variety_analysis = "运动项目多样，这有助于全面锻炼身体。"
+        variety_emoji = "🎯"
+    elif sport_variety == 2:
+        variety_analysis = "可以尝试更多不同的运动项目。"
+        variety_emoji = "🔁"
+    else:
+        variety_analysis = "建议增加运动种类，让锻炼更有趣。"
+        variety_emoji = "🔄"
+    
+    # 趋势分析
+    if len(data) > 5:
+        trend = "数据显示你正在建立良好的健康习惯"
+        trend_emoji = "📈"
+    else:
+        trend = "继续坚持记录，很快就会看到进步"
+        trend_emoji = "🌟"
+    
+    analysis = f"""
+{sport_emoji} **运动分析**
+最近{len(recent_data)}天中，你有{active_days}天进行了运动，平均每天{avg_duration:.1f}分钟。{sport_analysis}
 
-运动数据：
-- 运动天数：{len(recent_data[recent_data['运动时长(分钟)'] > 0])}天
-- 平均运动时长：{recent_data['运动时长(分钟)'].mean():.1f}分钟
-- 主要运动类型：{recent_data[recent_data['运动项目'] != '']['运动项目'].mode().iloc[0] if len(recent_data[recent_data['运动项目'] != '']) > 0 else '多样'}
+{sleep_emoji} **睡眠分析**
+平均每晚睡眠{avg_sleep:.1f}小时，质量评分{avg_quality:.1f}/5分。{sleep_analysis}
 
-睡眠数据：
-- 平均睡眠时长：{recent_data['睡眠时长(小时)'].mean():.1f}小时
-- 平均睡眠质量：{recent_data['睡眠质量'].mean():.1f}/5分
+{variety_emoji} **运动多样性**
+你进行了{sport_variety}种不同的运动。{variety_analysis}
+
+{trend_emoji} **总体趋势**
+{trend}。建议继续保持记录，观察长期变化。
+
+**个性化建议：**
+{'🏃 尝试新的运动项目，让锻炼更有趣' if sport_variety < 3 else ''}
+{'🌜 建立规律的睡眠时间表' if avg_sleep < 7 else ''}
+{'📝 多记录心路历程，反思运动感受' if len(recent_data[recent_data['心路历程'] != '']) < 3 else ''}
 """
+    return analysis
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
-    }
+# 健康小贴士库
+HEALTH_TIPS = [
+    "💡 记得运动前热身，运动后拉伸",
+    "💧 保持充足水分摄入，运动时尤其重要",
+    "🌙 睡前1小时避免使用电子设备",
+    "🥗 均衡饮食是健康生活的基础",
+    "🚶 即使不运动，也多站起来活动",
+    "😊 保持积极心态，健康从心开始",
+    "📅 建立规律的运动习惯",
+    "🌞 早晨的阳光有助于调节生物钟",
+    "🧘 尝试冥想或深呼吸来放松",
+    "🎯 设定小目标，逐步实现大目标"
+]
 
-    payload = {
-        "model": "google/gemini-pro-1.5",
-        "messages": [
-            {
-                "role": "system",
-                "content": "你是一个专业且充满关怀的健康顾问。基于用户提供的健康数据，提供个性化分析和实用建议。用温暖、鼓励的语气，突出进步亮点，指出改进空间，提供具体可行的建议。"
-            },
-            {
-                "role": "user", 
-                "content": f"{summary}\n请基于以上健康数据，为我提供个性化的健康分析和改进建议。"
-            }
-        ],
-        "temperature": 0.7,
-        "max_tokens": 500
-    }
+def get_health_tip():
+    """从本地库获取健康小贴士"""
+    import random
+    return random.choice(HEALTH_TIPS)
 
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            return result['choices'][0]['message']['content']
-        else:
-            return f"AI分析暂时不可用 (状态码: {response.status_code})"
-    except Exception as e:
-        return f"AI分析服务暂时不可用: {str(e)}"
-
-# 快速健康建议
-def get_quick_tip():
-    """获取快速健康小贴士"""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
-    }
-
-    payload = {
-        "model": "google/gemini-pro-1.5", 
-        "messages": [
-            {
-                "role": "system",
-                "content": "用一句话提供简洁实用的健康建议。"
-            },
-            {
-                "role": "user",
-                "content": "给我一个今天的健康小贴士。"
-            }
-        ],
-        "temperature": 0.8,
-        "max_tokens": 50
-    }
-
-    try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
-        if response.status_code == 200:
-            result = response.json()
-            return result['choices'][0]['message']['content']
-        else:
-            return "保持积极心态，健康从心开始！"
-    except:
-        return "今天也要记得运动和充足睡眠哦！"
-
-st.title("🏃 AI健康分析平台")
+st.title("🏃 智能健康分析平台")
 st.markdown("---")
 
 # 显示当前数据
 current_data = load_data()
 st.write(f"**当前记录数: {len(current_data)}**")
 
-# 数据输入 - 使用表单来避免刷新问题
+# 数据输入
 st.subheader("📝 添加新记录")
 
 with st.form("data_form", clear_on_submit=True):
-    # 手动输入所有字段
     date = st.text_input("日期*", value=datetime.now().strftime('%Y-%m-%d'))
     sport = st.text_input("运动项目*", placeholder="跑步、篮球等")
     duration = st.text_input("运动时长(分钟)*", placeholder="30、45等") 
@@ -147,28 +149,20 @@ with st.form("data_form", clear_on_submit=True):
     sleep_quality = st.text_input("睡眠质量(1-5分)*", placeholder="1-5的数字")
     notes = st.text_area("心路历程", placeholder="记录今天的感受和想法...")
     
-    # 保存按钮在表单内
     submitted = st.form_submit_button("💾 保存记录", type="primary", use_container_width=True)
     
     if submitted:
-        # 检查必填字段
         missing_fields = []
-        if not date.strip():
-            missing_fields.append("日期")
-        if not sport.strip():
-            missing_fields.append("运动项目")
-        if not duration.strip():
-            missing_fields.append("运动时长")
-        if not sleep_hours.strip():
-            missing_fields.append("睡眠时长")
-        if not sleep_quality.strip():
-            missing_fields.append("睡眠质量")
+        if not date.strip(): missing_fields.append("日期")
+        if not sport.strip(): missing_fields.append("运动项目")
+        if not duration.strip(): missing_fields.append("运动时长")
+        if not sleep_hours.strip(): missing_fields.append("睡眠时长")
+        if not sleep_quality.strip(): missing_fields.append("睡眠质量")
         
         if missing_fields:
             st.error(f"请填写以下必填字段: {', '.join(missing_fields)}")
         else:
             try:
-                # 验证数字格式
                 duration_val = float(duration)
                 sleep_hours_val = float(sleep_hours)
                 sleep_quality_val = float(sleep_quality)
@@ -176,7 +170,6 @@ with st.form("data_form", clear_on_submit=True):
                 if sleep_quality_val < 1 or sleep_quality_val > 5:
                     st.error("睡眠质量必须在1-5之间")
                 else:
-                    # 创建新记录
                     new_record = {
                         '日期': date.strip(),
                         '运动项目': sport.strip(),
@@ -186,15 +179,10 @@ with st.form("data_form", clear_on_submit=True):
                         '心路历程': notes.strip()
                     }
                     
-                    # 加载当前数据
                     existing_data = load_data()
-                    
-                    # 转换为DataFrame
                     new_df = pd.DataFrame([new_record])
                     
-                    # 合并数据
                     if not existing_data.empty:
-                        # 移除同一天的旧记录（如果存在）
                         existing_dates = existing_data['日期'].astype(str).tolist()
                         if date.strip() in existing_dates:
                             existing_data = existing_data[existing_data['日期'].astype(str) != date.strip()]
@@ -204,49 +192,45 @@ with st.form("data_form", clear_on_submit=True):
                     else:
                         updated_data = new_df
                     
-                    # 保存数据
                     if save_data(updated_data):
                         st.success("✅ 保存成功！")
-                        st.balloons()  # 庆祝动画
+                        st.balloons()
                         
             except ValueError:
                 st.error("请确保运动时长、睡眠时长和睡眠质量都是有效的数字")
             except Exception as e:
                 st.error(f"保存失败: {str(e)}")
 
-# AI分析功能
+# 智能分析功能
 st.markdown("---")
-st.subheader("🤖 AI健康分析")
+st.subheader("🤖 智能健康分析")
 
-# 快速小贴士
-if st.button("💡 获取今日健康小贴士"):
-    with st.spinner("获取小贴士中..."):
-        tip = get_quick_tip()
-        st.success(tip)
+# 健康小贴士
+if st.button("💡 获取健康小贴士"):
+    tip = get_health_tip()
+    st.success(tip)
 
 # 深度分析
 if len(current_data) >= 3:
-    if st.button("🔍 生成深度健康报告", type="secondary"):
-        with st.spinner("AI正在深度分析您的健康数据..."):
-            analysis = get_ai_health_analysis(current_data)
-            st.session_state.ai_analysis = analysis
+    if st.button("🔍 生成健康报告", type="secondary"):
+        with st.spinner("正在分析您的健康数据..."):
+            analysis = get_local_health_analysis(current_data)
+            st.session_state.health_analysis = analysis
     
-    if 'ai_analysis' in st.session_state:
-        st.info(st.session_state.ai_analysis)
+    if 'health_analysis' in st.session_state:
+        st.info(st.session_state.health_analysis)
 else:
-    st.info("📊 需要至少3天数据才能生成AI分析报告")
+    st.info("📊 需要至少3天数据才能生成分析报告")
 
-# 显示数据
+# 数据显示
 st.markdown("---")
 st.subheader("📋 所有记录")
 
 data = load_data()
 if not data.empty:
-    # 确保日期列显示正确
     display_data = data.copy()
     st.dataframe(display_data, use_container_width=True, hide_index=True)
     
-    # 显示统计
     st.subheader("📊 数据统计")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -263,17 +247,17 @@ if not data.empty:
 else:
     st.info("暂无数据，请在上面添加你的第一条记录")
 
-# 手动刷新按钮
+# 管理功能
 st.markdown("---")
-if st.button("🔄 手动刷新数据", use_container_width=True):
-    st.rerun()
-
-# 清空数据
-if st.button("🗑️ 清空所有数据", use_container_width=True):
-    if os.path.exists(DATA_FILE):
-        os.remove(DATA_FILE)
-        st.success("数据已清空")
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("🔄 刷新数据", use_container_width=True):
         st.rerun()
-    else:
-        st.info("没有数据可清空")
+with col2:
+    if st.button("🗑️ 清空数据", use_container_width=True):
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+            st.success("数据已清空")
+            st.rerun()
+
 
