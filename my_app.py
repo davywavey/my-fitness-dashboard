@@ -36,7 +36,7 @@ def analyze_health_data(new_record, all_data, model_name):
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "HTTP-Referer": "https://my-fitness-dashboard.streamlit.app/",
         "X-Title": "健康数据分析AI",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json; charset=utf-8"
     }
 
     data = {
@@ -48,14 +48,20 @@ def analyze_health_data(new_record, all_data, model_name):
     }
 
     try:
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                            headers=headers, json=data, timeout=60)
+        res = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=data.encode("utf-8") if isinstance(data, str) else data,
+            timeout=60
+        )
+        res.encoding = "utf-8"
         if res.status_code == 200:
             return res.json()["choices"][0]["message"]["content"].strip()
         else:
             return f"⚠️ AI 分析出错：{res.status_code}\n{res.text}"
     except Exception as e:
         return f"⚠️ 网络或接口错误：{e}"
+
 
 # ============= 数据文件配置 =============
 DATA_FILE = "my_data.csv"
@@ -145,4 +151,5 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
