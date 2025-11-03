@@ -66,7 +66,7 @@ def analyze_health_data(new_record, all_data):
 请使用简洁自然的中文表达。
 """
         response = client.chat.completions.create(
-            model="gpt-4-mini",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content.strip()
@@ -162,6 +162,7 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
 
