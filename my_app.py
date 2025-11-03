@@ -10,6 +10,8 @@ st.set_page_config(page_title="健康数据记录系统", page_icon="🏃", layo
 # ============= OpenRouter 设置 =============
 import json
 import requests
+OPENROUTER_API_KEY = "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"
+
 
 def analyze_health_data(new_record, all_data, model_name):
     """
@@ -162,6 +164,7 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
 
