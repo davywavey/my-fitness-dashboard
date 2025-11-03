@@ -3,6 +3,8 @@ import pandas as pd
 import os
 import requests
 from datetime import datetime
+# -*- coding: utf-8 -*-
+
 
 # ============= 页面配置 =============
 st.set_page_config(page_title="健康数据记录系统", page_icon="🏃", layout="wide")
@@ -139,6 +141,7 @@ if not data.empty:
     st.dataframe(data, use_container_width=True)
 else:
     st.info("暂无数据。")
+
 
 
 
