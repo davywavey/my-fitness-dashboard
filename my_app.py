@@ -214,7 +214,18 @@ if st.button("💡 获取健康小贴士"):
 if len(current_data) >= 3:
     if st.button("🔍 生成健康报告", type="secondary"):
         with st.spinner("正在分析您的健康数据..."):
-            analysis = get_local_health_analysis(current_data)
+            # 使用新的后端分析函数！
+sport_analysis = analyze_sport_data(current_data)
+sleep_analysis = analyze_sleep_data(current_data)
+
+# 组合显示结果
+analysis = f"""
+🏃 **运动分析**
+{sport_analysis}
+
+😴 **睡眠分析**  
+{sleep_analysis}
+"""
             st.session_state.health_analysis = analysis
     
     if 'health_analysis' in st.session_state:
@@ -259,5 +270,6 @@ with col2:
             os.remove(DATA_FILE)
             st.success("数据已清空")
             st.rerun()
+
 
 
