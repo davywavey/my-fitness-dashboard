@@ -242,15 +242,7 @@ if st.button("💡 获取健康小贴士"):
 if len(current_data) >= 3:
     if st.button("🔍 生成健康报告", type="secondary"):
         with st.spinner("正在分析您的健康数据..."):
-            # 改为调用完整的分析函数！
             analysis = get_local_health_analysis(current_data)
-            st.session_state.health_analysis = analysis
-    
-    if 'health_analysis' in st.session_state:
-        st.info(st.session_state.health_analysis)
-else:
-    st.info("📊 需要至少3天数据才能生成分析报告")
-            analysis = f"🏃 **运动分析**\n{sport_analysis}\n\n😴 **睡眠分析**\n{sleep_analysis}"
             st.session_state.health_analysis = analysis
     
     if 'health_analysis' in st.session_state:
@@ -317,6 +309,7 @@ def get_health_tip():
         "🌙 睡前1小时避免使用电子设备"
     ]
     return random.choice(HEALTH_TIPS)
+
 
 
 
