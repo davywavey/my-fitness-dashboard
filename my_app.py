@@ -249,19 +249,6 @@ if len(current_data) >= 3:
         st.info(st.session_state.health_analysis)
 else:
     st.info("📊 需要至少3天数据才能生成分析报告")
-🏃 **运动分析**
-{sport_analysis}
-
-😴 **睡眠分析**  
-{sleep_analysis}
-"""
-            st.session_state.health_analysis = analysis
-    
-    if 'health_analysis' in st.session_state:
-        st.info(st.session_state.health_analysis)
-else:
-    st.info("📊 需要至少3天数据才能生成分析报告")
-
 # 数据显示
 st.markdown("---")
 st.subheader("📋 所有记录")
@@ -309,6 +296,7 @@ def get_health_tip():
         "🌙 睡前1小时避免使用电子设备"
     ]
     return random.choice(HEALTH_TIPS)
+
 
 
 
