@@ -87,89 +87,104 @@ def save_data(data):
         st.error(f"保存失败: {e}")
         return False
 def get_local_health_analysis(data):
-    """升级版智能健康分析"""
+    """恢复并增强您原来的智能分析逻辑"""
     if len(data) < 3:
         return "需要至少3天的数据才能生成有意义的分析报告"
     
     recent_data = data.tail(7)
     
-    # ========== 1. 更精细的运动分析 ==========
+    # ========== 1. 运动分析（恢复您原来的逻辑） ==========
     avg_duration = recent_data['运动时长(分钟)'].mean()
     active_days = len(recent_data[recent_data['运动时长(分钟)'] > 0])
     sport_variety = len(recent_data[recent_data['运动项目'] != '']['运动项目'].unique())
     
-    # 运动评分系统
-    duration_score = min(avg_duration / 45 * 100, 100)  # 45分钟为满分
-    consistency_score = (active_days / 7) * 100
-    variety_score = min(sport_variety * 25, 100)  # 4种运动为满分
-    
-    total_sport_score = (duration_score * 0.5 + consistency_score * 0.3 + variety_score * 0.2)
-    
-    if total_sport_score > 85:
-        sport_analysis = f"🏆 运动达人！综合评分{total_sport_score:.0f}分"
-    elif total_sport_score > 70:
-        sport_analysis = f"👍 习惯良好！综合评分{total_sport_score:.0f}分"
-    elif total_sport_score > 50:
-        sport_analysis = f"💪 稳步进步！综合评分{total_sport_score:.0f}分"
+    # 您原来的运动分析逻辑
+    if avg_duration > 45:
+        sport_analysis = f"你的运动量相当充足！保持这个节奏对身体很有益。"
+        sport_emoji = "🏆"
+    elif avg_duration > 25:
+        sport_analysis = "运动习惯很好，继续保持！"
+        sport_emoji = "👍"
     else:
-        sport_analysis = f"📈 起步阶段！综合评分{total_sport_score:.0f}分"
+        sport_analysis = "运动量还有提升空间，建议逐步增加运动频率。"
+        sport_emoji = "💪"
     
-    # ========== 2. 睡眠深度分析 ==========
+    # ========== 2. 睡眠分析（恢复您原来的逻辑） ==========
     avg_sleep = recent_data['睡眠时长(小时)'].mean()
     avg_quality = recent_data['睡眠质量'].mean()
     
-    # 睡眠评分
-    sleep_duration_score = min(avg_sleep / 8 * 100, 100)  # 8小时为满分
-    sleep_quality_score = (avg_quality / 5) * 100
-    
-    total_sleep_score = (sleep_duration_score * 0.6 + sleep_quality_score * 0.4)
-    
-    if total_sleep_score > 85:
-        sleep_analysis = f"😴 完美睡眠！评分{total_sleep_score:.0f}分"
-    elif total_sleep_score > 70:
-        sleep_analysis = f"😊 睡眠良好！评分{total_sleep_score:.0f}分"
-    elif total_sleep_score > 50:
-        sleep_analysis = f"🌙 基本达标！评分{total_sleep_score:.0f}分"
+    # 您原来的睡眠分析逻辑
+    if avg_sleep >= 7.5 and avg_quality >= 4:
+        sleep_analysis = "睡眠质量非常理想，这对运动恢复很重要。"
+        sleep_emoji = "😴"
+    elif avg_sleep >= 7:
+        sleep_analysis = "睡眠状况良好，可以继续保持。"
+        sleep_emoji = "😊"
     else:
-        sleep_analysis = f"⚠️ 需要改善！评分{total_sleep_score:.0f}分"
+        sleep_analysis = "睡眠时间稍显不足，建议保证7小时以上睡眠。"
+        sleep_emoji = "🌙"
     
-    # ========== 3. 个性化建议 ==========
-    suggestions = []
+    # ========== 3. 运动多样性（恢复您原来的逻辑） ==========
+    if sport_variety >= 3:
+        variety_analysis = "运动项目多样，这有助于全面锻炼身体。"
+        variety_emoji = "🎯"
+    elif sport_variety == 2:
+        variety_analysis = "可以尝试更多不同的运动项目。"
+        variety_emoji = "🔁"
+    else:
+        variety_analysis = "建议增加运动种类，让锻炼更有趣。"
+        variety_emoji = "🔄"
     
-    if avg_duration < 30:
-        suggestions.append("🎯 目标：逐步增加运动时长至每天30分钟")
+    # ========== 4. 趋势分析（恢复您原来的逻辑） ==========
+    if len(data) > 5:
+        trend = "数据显示你正在建立良好的健康习惯"
+        trend_emoji = "📈"
+    else:
+        trend = "继续坚持记录，很快就会看到进步"
+        trend_emoji = "🌟"
     
-    if sport_variety < 2:
-        suggestions.append("🔄 建议：尝试不同的运动项目，如游泳、瑜伽")
+    # ========== 5. 新增：深度洞察 ==========
+    insights = []
     
-    if avg_sleep < 7:
-        suggestions.append("🌜 提醒：保证7小时以上睡眠有助于恢复")
+    # 洞察1：运动与睡眠关系
+    if avg_duration > 30 and avg_quality >= 4:
+        insights.append("💡 发现：您的充足运动似乎对睡眠质量有积极影响")
     
-    if avg_quality < 3:
-        suggestions.append("🛌 改善：建立规律的睡前仪式，如阅读、冥想")
+    # 洞察2：规律性评估
+    consistency_rate = active_days / 7 * 100
+    if consistency_rate >= 85:
+        insights.append("📅 亮点：运动习惯非常规律，保持得很好！")
+    elif consistency_rate >= 60:
+        insights.append("🔄 提示：运动频率可以更规律一些")
     
-    # 如果有记录心路历程，分析情绪趋势
-    if '心路历程' in recent_data.columns and recent_data['心路历程'].notna().any():
-        notes_count = len(recent_data[recent_data['心路历程'].notna()])
-        suggestions.append(f"📝 您记录了{notes_count}次心路历程，这对反思很有帮助")
+    # 洞察3：进步空间
+    if len(data) >= 14:  # 有2周数据时
+        first_half = data.head(7)['运动时长(分钟)'].mean()
+        second_half = data.tail(7)['运动时长(分钟)'].mean()
+        if second_half > first_half * 1.2:
+            insights.append("🚀 进步：最近一周运动量有明显提升！")
     
-    # ========== 4. 生成完整报告 ==========
+    # ========== 6. 生成完整报告 ==========
     analysis = f"""
-🏃 **运动分析报告**
-最近7天运动数据：
-• 平均时长：{avg_duration:.1f}分钟
-• 运动天数：{active_days}天
-• 运动种类：{sport_variety}种
-{sport_analysis}
+{sport_emoji} **运动分析**
+最近{len(recent_data)}天中，你有{active_days}天进行了运动，平均每天{avg_duration:.1f}分钟。{sport_analysis}
 
-😴 **睡眠分析报告**  
-平均睡眠：{avg_sleep:.1f}小时 | 质量：{avg_quality:.1f}/5分
-{sleep_analysis}
+{sleep_emoji} **睡眠分析**
+平均每晚睡眠{avg_sleep:.1f}小时，质量评分{avg_quality:.1f}/5分。{sleep_analysis}
 
-💡 **个性化建议**
-{chr(10).join(f"• {s}" for s in suggestions) if suggestions else "• 继续保持良好习惯！"}
+{variety_emoji} **运动多样性**
+你进行了{sport_variety}种不同的运动。{variety_analysis}
 
-📊 **综合健康指数：{(total_sport_score * 0.6 + total_sleep_score * 0.4):.0f}/100分**
+{trend_emoji} **总体趋势**
+{trend}。建议继续保持记录，观察长期变化。
+
+🔍 **深度洞察**
+{chr(10).join(f"• {insight}" for insight in insights) if insights else "• 继续记录，系统会发现更多个性化洞察"}
+
+🎯 **个性化建议**
+{'🏃 尝试新的运动项目，让锻炼更有趣' if sport_variety < 3 else ''}
+{'🌜 建立规律的睡眠时间表' if avg_sleep < 7 else ''}
+{'📝 多记录心路历程，反思运动感受' if '心路历程' in recent_data.columns and len(recent_data[recent_data['心路历程'] != '']) < 3 else ''}
 """
     
     return analysis
@@ -369,6 +384,7 @@ def analyze_sleep_data(data):
         return "😊 睡眠状况良好"
     else:
         return "🌙 建议保证7小时以上睡眠"
+
 
 
 
