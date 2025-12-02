@@ -356,39 +356,3 @@ def get_health_tip():
     ]
     return random.choice(HEALTH_TIPS)
 
-def analyze_sport_data(data):
-    """分析运动数据"""
-    if len(data) < 1:
-        return "暂无运动数据"
-    
-    avg_duration = data['运动时长(分钟)'].mean()
-    
-    if avg_duration > 45:
-        return "🏆 您的运动量很充足！继续保持！"
-    elif avg_duration > 25:
-        return "👍 运动习惯很好，继续保持！"
-    else:
-        return "💪 建议逐步增加运动频率"
-
-def analyze_sleep_data(data):
-    """分析睡眠数据"""
-    if len(data) < 1:
-        return "暂无睡眠数据"
-    
-    avg_sleep = data['睡眠时长(小时)'].mean()
-    avg_quality = data['睡眠质量'].mean()
-    
-    if avg_sleep >= 7.5 and avg_quality >= 4:
-        return "😴 睡眠质量非常理想！"
-    elif avg_sleep >= 7:
-        return "😊 睡眠状况良好"
-    else:
-        return "🌙 建议保证7小时以上睡眠"
-
-
-
-
-
-
-
-
