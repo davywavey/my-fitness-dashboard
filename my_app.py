@@ -15,6 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
+
 DATA_FILE = 'my_data.csv'
 
 # 数据操作函数
@@ -160,7 +161,19 @@ def get_health_tip():
     return random.choice(HEALTH_TIPS)
 
 st.title("🏃 智能健康分析平台")
-st.markdown("---")
+st.markdown("""
+### 📘 Project Summary
+本项目是一个 **个人健康数据分析平台**，帮助用户记录每日运动、睡眠并生成智能分析报告。
+数据来自：用户自行上传或手动输入  
+核心功能：
+- 📊 健康数据记录（运动、睡眠、心路历程）  
+- 🤖 本地智能健康分析（趋势、习惯、睡眠质量、运动结构）  
+- 📈 数据自动可视化 & 基础统计  
+- 📥 支持上传 CSV 数据查看结果  
+
+这是一个持续迭代的真实个人项目，未来将加入自动同步智能手表数据、运动预测模型等功能。
+""")
+
 
 # 显示当前数据
 current_data = load_data()
@@ -168,6 +181,22 @@ st.write(f"**当前记录数: {len(current_data)}**")
 
 # 数据输入
 st.subheader("📝 添加新记录")
+st.subheader("📥 上传数据（可选）")
+
+uploaded = st.file_uploader("上传 CSV 文件以导入健康数据", type=["csv"])
+if uploaded:
+    try:
+        new_data = pd.read_csv(uploaded)
+        st.dataframe(new_data, use_container_width=True)
+        if st.button("📩 导入到系统"):
+            existing = load_data()
+            combined = pd.concat([existing, new_data], ignore_index=True)
+            save_data(combined)
+            st.success("CSV 数据已导入！")
+            st.rerun()
+    except Exception as e:
+        st.error(f"上传失败：{e}")
+
 
 with st.form("data_form", clear_on_submit=True):
     date = st.text_input("日期*", value=datetime.now().strftime('%Y-%m-%d'))
@@ -258,21 +287,21 @@ if not data.empty:
     display_data = data.copy()
     st.dataframe(display_data, use_container_width=True, hide_index=True)
     
-    st.subheader("📊 数据统计")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("总记录数", len(data))
-    with col2:
-        active_days = len(data[data['运动时长(分钟)'] > 0])
-        st.metric("运动天数", active_days)
-    with col3:
-        avg_sleep = data['睡眠时长(小时)'].mean()
-        st.metric("平均睡眠", f"{avg_sleep:.1f}小时")
-    with col4:
-        avg_quality = data['睡眠质量'].mean()
-        st.metric("睡眠质量", f"{avg_quality:.1f}/5")
-else:
-    st.info("暂无数据，请在上面添加你的第一条记录")
+   st.subheader("📊 数据统计（Summary）")
+
+col1, col2, col3, col4, col5 = st.columns(5)
+
+with col1:
+    st.metric("总记录数", len(data))
+with col2:
+    st.metric("运动天数", len(data[data['运动时长(分钟)'] > 0]))
+with col3:
+    st.metric("平均运动时长", f"{data['运动时长(分钟)'].mean():.1f} 分钟")
+with col4:
+    st.metric("平均睡眠", f"{data['睡眠时长(小时)'].mean():.1f} 小时")
+with col5:
+    st.metric("平均睡眠质量", f"{data['睡眠质量'].mean():.1f}/5")
+
 
 # 管理功能
 st.markdown("---")
@@ -296,6 +325,7 @@ def get_health_tip():
         "🌙 睡前1小时避免使用电子设备"
     ]
     return random.choice(HEALTH_TIPS)
+
 
 
 
