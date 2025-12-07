@@ -2,7 +2,7 @@
   <div id="app">
     <header class="app-header">
       <h1>🏃 我的健康数据分析平台</h1>
-      <p>前后端分离版本 - 由我自己开发</p>
+      <p>前后端分离版本 - 升级版</p>
     </header>
 
     <div class="container">
@@ -16,7 +16,6 @@
           <input v-model="newRecord.睡眠时长" placeholder="睡眠时长(小时)" type="number" step="0.1">
           <input v-model="newRecord.睡眠质量" placeholder="睡眠质量(1-5)" type="number" min="1" max="5">
           <textarea v-model="newRecord.心路历程" placeholder="心路历程..."></textarea>
-          
           <button @click="addRecord" class="btn-primary">💾 保存记录</button>
         </div>
       </div>
@@ -27,8 +26,8 @@
         <div class="analysis-buttons">
           <button @click="getHealthTip" class="btn-secondary">💡 获取健康小贴士</button>
           <button @click="getAnalysis" class="btn-secondary">🔍 生成健康报告</button>
+          <button @click="exportCSV" class="btn-secondary">📥 导出 CSV</button>
         </div>
-        
         <div v-if="currentTip" class="tip-card">
           <strong>今日小贴士：</strong> {{ currentTip }}
         </div>
@@ -45,7 +44,7 @@
                 <span>运动种类: {{ analysis.stats.sport_variety }}</span>
               </div>
             </div>
-            
+
             <div class="analysis-card">
               <h4>😴 睡眠分析</h4>
               <p>{{ analysis.sleep_analysis }}</p>
@@ -55,6 +54,12 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Plotly 图表 -->
+        <div v-if="records.length" class="charts-section">
+          <h3>📈 数据可视化</h3>
+          <plotly :data="plotlyData" :layout="plotlyLayout" :options="{responsive:true}" style="width:100%;height:500px;"></plotly>
         </div>
       </div>
 
@@ -75,6 +80,15 @@
             <div v-if="record.心路历程" class="record-notes">
               {{ record.心路历程 }}
             </div>
+            <!-- AI 小结 -->
+            <button @click="generateAISummary(record.id)" class="btn-secondary btn-small">🤖 生成 AI 小结</button>
+            <div v-if="aiSummaries[record.id]" class="ai-summary">
+              <strong>AI 小结:</strong>
+              <ul>
+                <li v-for="obs in aiSummaries[record.id].observations" :key="obs">{{ obs }}</li>
+                <li v-for="sug in aiSummaries[record.id].suggestions" :key="sug"><em>{{ sug }}</em></li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -84,11 +98,13 @@
 
 <script>
 import axios from 'axios';
+import Plotly from 'vue-plotly';
 
 const API_BASE = 'http://localhost:5000/api';
 
 export default {
   name: 'App',
+  components: { plotly: Plotly },
   data() {
     return {
       records: [],
@@ -101,7 +117,10 @@ export default {
         心路历程: ''
       },
       currentTip: '',
-      analysis: null
+      analysis: null,
+      aiSummaries: {},
+      plotlyData: [],
+      plotlyLayout: {}
     }
   },
   async mounted() {
@@ -112,17 +131,16 @@ export default {
       try {
         const response = await axios.get(`${API_BASE}/health/records`);
         this.records = response.data.data;
+        this.preparePlotlyData();
       } catch (error) {
         console.error('加载数据失败:', error);
       }
     },
-    
+
     async addRecord() {
       try {
         await axios.post(`${API_BASE}/health/records`, this.newRecord);
         await this.loadRecords();
-        
-        // 清空表单
         this.newRecord = {
           日期: new Date().toISOString().split('T')[0],
           运动项目: '',
@@ -131,14 +149,13 @@ export default {
           睡眠质量: '',
           心路历程: ''
         };
-        
         alert('记录添加成功！');
       } catch (error) {
         console.error('添加记录失败:', error);
         alert('添加失败，请检查数据格式');
       }
     },
-    
+
     async getHealthTip() {
       try {
         const response = await axios.get(`${API_BASE}/health/tips`);
@@ -147,7 +164,7 @@ export default {
         console.error('获取小贴士失败:', error);
       }
     },
-    
+
     async getAnalysis() {
       try {
         const response = await axios.get(`${API_BASE}/health/analysis`);
@@ -155,221 +172,66 @@ export default {
       } catch (error) {
         console.error('获取分析失败:', error);
       }
+    },
+
+    async generateAISummary(recordId) {
+      try {
+        const response = await axios.get(`${API_BASE}/health/analysis/per_run`);
+        const summary = response.data.find(item => item.id === recordId);
+        if (summary) {
+          this.$set(this.aiSummaries, recordId, summary.summary);
+        }
+      } catch (error) {
+        console.error('生成 AI 小结失败:', error);
+      }
+    },
+
+    preparePlotlyData() {
+      if (!this.records.length) return;
+      const dates = this.records.map(r => r.日期);
+      const durations = this.records.map(r => r.运动时长);
+      const sleepHours = this.records.map(r => r.睡眠时长);
+
+      this.plotlyData = [
+        { x: dates, y: durations, type: 'scatter', mode: 'lines+markers', name: '运动时长(分钟)' },
+        { x: dates, y: sleepHours, type: 'scatter', mode: 'lines+markers', name: '睡眠时长(小时)' }
+      ];
+      this.plotlyLayout = {
+        title: '运动与睡眠趋势',
+        xaxis: { title: '日期' },
+        yaxis: { title: '时长' },
+        legend: { orientation: 'h' }
+      };
+    },
+
+    exportCSV() {
+      if (!this.records.length) return;
+      const csvContent = [
+        Object.keys(this.records[0]).join(','),
+        ...this.records.map(r => Object.values(r).join(','))
+      ].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'fitness_records.csv');
+      link.click();
     }
   }
 }
 </script>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-}
-
-#app {
-  min-height: 100vh;
-}
-
-.app-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 2rem;
-  text-align: center;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-}
-
-.app-header h1 {
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.app-header p {
-  color: #666;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.input-section, .analysis-section, .data-section {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.input-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.input-form input, .input-form textarea {
-  padding: 0.75rem;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-.input-form input:focus, .input-form textarea:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.input-form textarea {
-  grid-column: 1 / -1;
-  min-height: 80px;
-  resize: vertical;
-}
-
-.btn-primary, .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  grid-column: 1 / -1;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #5a6fd8;
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background: #f8f9fa;
-  color: #333;
-  border: 2px solid #e1e5e9;
-}
-
-.btn-secondary:hover {
-  background: #e9ecef;
-  transform: translateY(-2px);
-}
-
-.analysis-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.tip-card {
-  background: #e3f2fd;
-  padding: 1rem;
-  border-radius: 8px;
-  margin: 1rem 0;
-}
-
-.analysis-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-.analysis-card {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
-}
-
-.analysis-card h4 {
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.stats {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stats span {
-  background: white;
+/* 原有样式不变，可复用前一个 App.vue 的样式 */
+.btn-small {
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.records-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.record-card {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-}
-
-.record-header {
-  display: flex;
-  justify-content: between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.sport-type {
-  background: #667eea;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
   font-size: 0.8rem;
+  margin-top: 0.5rem;
 }
-
-.record-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.record-notes {
-  background: white;
+.ai-summary {
+  background: #f1f8e9;
   padding: 0.75rem;
-  border-radius: 4px;
-  font-style: italic;
-  color: #666;
-}
-
-@media (max-width: 768px) {
-  .input-form {
-    grid-template-columns: 1fr;
-  }
-  
-  .analysis-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .records-list {
-    grid-template-columns: 1fr;
-  }
-  
-  .analysis-buttons {
-    flex-direction: column;
-  }
+  margin-top: 0.5rem;
+  border-radius: 6px;
 }
 </style>
