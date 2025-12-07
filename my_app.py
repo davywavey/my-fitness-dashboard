@@ -287,20 +287,25 @@ if not data.empty:
     display_data = data.copy()
     st.dataframe(display_data, use_container_width=True, hide_index=True)
     
-   st.subheader("📊 数据统计（Summary）")
+st.subheader("📊 数据统计（Summary）")
 
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric("总记录数", len(data))
+
 with col2:
     st.metric("运动天数", len(data[data['运动时长(分钟)'] > 0]))
+
 with col3:
     st.metric("平均运动时长", f"{data['运动时长(分钟)'].mean():.1f} 分钟")
+
 with col4:
     st.metric("平均睡眠", f"{data['睡眠时长(小时)'].mean():.1f} 小时")
+
 with col5:
     st.metric("平均睡眠质量", f"{data['睡眠质量'].mean():.1f}/5")
+
 
 
 # 管理功能
@@ -325,6 +330,7 @@ def get_health_tip():
         "🌙 睡前1小时避免使用电子设备"
     ]
     return random.choice(HEALTH_TIPS)
+
 
 
 
